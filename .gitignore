@@ -130,3 +130,5 @@ dmypy.json
 
 # Ignore the local dev files
 dev_files/
+paper_figures/
+*.wav
