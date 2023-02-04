@@ -12,9 +12,11 @@ from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QPushButton, QWidget, QFil
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, freq=4_000):
         super().__init__()
         self.setWindowTitle("Chaotic Audio Encryptor")
+
+        self.freq = freq
 
         self.save_dir = "./"
         self.decrypt_dir = "./"
@@ -23,6 +25,8 @@ class MainWindow(QMainWindow):
         self.encryption_r = 0.0
         self.decryption_x0 = 0.0
         self.decryption_r = 0.0
+        self.encrypted_filename = "encrypted.wav"
+        self.decrypted_filename = "decrypted.wav"
 
         # Create buttons
         self.start_button = QPushButton("Start")
@@ -33,7 +37,7 @@ class MainWindow(QMainWindow):
         self.encryption_keys = QPushButton("Select Encryption Keys")
         self.decrypt_keys = QPushButton("Select Decryption Keys")
         self.decrypt = QPushButton("Decrypt")
-
+        
 
         # Connect buttons to methods
         self.start_button.clicked.connect(self.start_numbers)
@@ -44,7 +48,6 @@ class MainWindow(QMainWindow):
         self.decrypt_keys.clicked.connect(self.select_decrypt_keys)
         self.select_decryption_save_dir.clicked.connect(self.select_decryption_save_directory)
         self.decrypt.clicked.connect(self.decrypt_file)
-        
 
         self.stop_button.setEnabled(False)
         # Create layout and add buttons
@@ -58,6 +61,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.select_decryption_save_dir, 2, 1)
         layout.addWidget(self.decrypt, 3, 1)
 
+        # Add a text field where the user gives the filename for the encrypted file
+
+
         # Set layout as central widget
         widget = QWidget()
         widget.setLayout(layout)
@@ -65,7 +71,7 @@ class MainWindow(QMainWindow):
         self.stop_flag = False
         self.stop_button.clicked.connect(self.stop_numbers)
 
-        self.thread = CompleteThread()
+        self.thread = CompleteThread(fs=self.freq)
 
         self.recordings = []
 
@@ -89,18 +95,27 @@ class MainWindow(QMainWindow):
 
         decrypted = np.bitwise_xor(encrypted, numbers[:len(encrypted)])
         # save recording as wav file
-        write_wav(f"{self.save_dir}test.wav", 4_000, recording)
-        write_wav(f"{self.save_dir}encrypted.wav", 4_000, encrypted)
-        write_wav(f"{self.save_dir}decrypted.wav", 4_000, decrypted)
+        write_wav(f"{self.save_dir}test.wav", self.freq, recording)
+        write_wav(f"{self.save_dir}{self.encrypt_filename}", self.freq, encrypted)
+        write_wav(f"{self.save_dir}decrypted.wav", self.freq, decrypted)
     
     def select_save_directory(self):
         self.save_dir = QFileDialog.getExistingDirectory(self, "Select Directory")
+        self.encrypt_filename = QInputDialog.getText(self, "Encryption Filename", "Enter filename")[0]
+
         if not self.save_dir.endswith("/"):
             self.save_dir += "/"
 
+        if self.encrypt_filename == "":
+            self.encrypt_filename = "encrypted.wav"
+
+        if not self.encrypt_filename.endswith(".wav"):
+            self.encrypt_filename += ".wav"
+
+
     def select_encrypted_file(self):
         self.encrypted_file = QFileDialog.getOpenFileName(self, "Select Encrypted File")[0]
-        print(self.encrypted_file)
+        
 
     def select_encryption_keys(self):
         # Create input dialogs
@@ -117,7 +132,6 @@ class MainWindow(QMainWindow):
         # Read encrypted file
         fs, encrypted = wavfile.read(file_path) # There is an issue with how this is read I think
         encrypted = np.expand_dims(encrypted, axis=1)
-        print("Encrypted:", encrypted.shape, np.amin(encrypted), np.amax(encrypted), encrypted.dtype)
         # Create the trajectory
         values_dict = {
             "numbers": [],
@@ -127,25 +141,30 @@ class MainWindow(QMainWindow):
             values_dict, 16 * len(encrypted), self.decryption_x0, self.decryption_r
         )
         
-        print(len(encrypted), len(values_dict["numbers"]), len(values_dict["numbers"][0]))
         # Stack lists from values
         key = np.concatenate(values_dict["numbers"])
-        print(key.shape)
         # Decrypt the file
         decrypted = np.bitwise_xor(encrypted, key[:len(encrypted)])
-        print("Decrypted:", decrypted.shape, np.amin(decrypted), np.amax(decrypted), decrypted.dtype)
-        save_path = self.decrypt_dir + "_______decrypted.wav"
+        save_path = self.decrypt_dir + self.decrypt_filename
         write_wav(save_path, fs, decrypted)
     
     def select_decryption_save_directory(self):
         self.decrypt_dir = QFileDialog.getExistingDirectory(self, "Select Directory")
+        self.decrypt_filename = QInputDialog.getText(self, "Decryption Filename", "Enter filename")[0]
+
+        if self.decrypt_filename == "":
+            self.decrypt_filename = "decrypted.wav"
+
+        if not self.decrypt_filename.endswith(".wav"):
+            self.decrypt_filename += ".wav"
+
         if not self.decrypt_dir.endswith("/"):
             self.decrypt_dir += "/"
 
 
 
 class CompleteThread(QThread):
-    def __init__(self, duration=0.5, fs=4_000):
+    def __init__(self, fs, duration=0.5):
         super().__init__()
         self.stop_flag = False
         self.all_recordings = []
@@ -154,6 +173,7 @@ class CompleteThread(QThread):
             "numbers": [],
             "encrypted": []
         }
+
         self.duration = duration
         self.fs = fs
         self.rec_time = int(duration * fs)
