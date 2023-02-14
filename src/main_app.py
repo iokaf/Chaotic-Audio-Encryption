@@ -95,9 +95,9 @@ class MainWindow(QMainWindow):
 
         decrypted = np.bitwise_xor(encrypted, numbers[:len(encrypted)])
         # save recording as wav file
-        write_wav(f"{self.save_dir}test.wav", self.freq, recording)
+        # write_wav(f"{self.save_dir}test.wav", self.freq, recording)
         write_wav(f"{self.save_dir}{self.encrypt_filename}", self.freq, encrypted)
-        write_wav(f"{self.save_dir}decrypted.wav", self.freq, decrypted)
+        # write_wav(f"{self.save_dir}decrypted.wav", self.freq, decrypted)
     
     def select_save_directory(self):
         self.save_dir = QFileDialog.getExistingDirectory(self, "Select Directory")
