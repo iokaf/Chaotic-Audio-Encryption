@@ -134,7 +134,6 @@ class MainWindow(QMainWindow):
         fs, encrypted = wavfile.read(file_path) # There is an issue with how this is read I think
         # encrypted = np.expand_dims(encrypted, axis=1)
 
-        print(encrypted.shape)
         # Create the trajectory
         values_dict = {
             "numbers": [],
@@ -150,7 +149,6 @@ class MainWindow(QMainWindow):
         key = np.concatenate(values_dict["numbers"])
         # Decrypt the file
 
-        print(key.shape)
         decrypted = np.bitwise_xor(encrypted, key[:len(encrypted)])
         save_path = self.decrypt_dir + self.decrypt_filename
         write_wav(save_path, fs, decrypted)
@@ -249,8 +247,6 @@ class CompleteThread(QThread):
             
             rec_thread.join()
             rng_thread.join()
-
-            print(self.results["numbers"][-1].shape, self.results["recordings"][-1].shape)
 
             self.results["encrypted"].append(np.bitwise_xor(self.results["numbers"][-1], self.results["recordings"][-1]))
         else:
