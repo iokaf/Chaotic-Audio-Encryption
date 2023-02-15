@@ -1,6 +1,7 @@
 import threading
 import random
-import sounddevice as sd
+# import sounddevice as sd
+import pyaudio
 import numpy as np
 
 from scipy.io.wavfile import write as write_wav
@@ -25,8 +26,8 @@ class MainWindow(QMainWindow):
         self.encryption_r = 0.0
         self.decryption_x0 = 0.0
         self.decryption_r = 0.0
-        self.encrypted_filename = "encrypted.wav"
-        self.decrypted_filename = "decrypted.wav"
+        self.encrypt_filename = "encrypted.wav"
+        self.decrypt_filename = "decrypted.wav"
 
         # Create buttons
         self.start_button = QPushButton("Start")
@@ -95,10 +96,10 @@ class MainWindow(QMainWindow):
 
         decrypted = np.bitwise_xor(encrypted, numbers[:len(encrypted)])
         # save recording as wav file
-        # write_wav(f"{self.save_dir}test.wav", self.freq, recording)
+        write_wav(f"{self.save_dir}test.wav", self.freq, recording)
         write_wav(f"{self.save_dir}{self.encrypt_filename}", self.freq, encrypted)
         # write_wav(f"{self.save_dir}decrypted.wav", self.freq, decrypted)
-    
+
     def select_save_directory(self):
         self.save_dir = QFileDialog.getExistingDirectory(self, "Select Directory")
         self.encrypt_filename = QInputDialog.getText(self, "Encryption Filename", "Enter filename")[0]
@@ -131,7 +132,9 @@ class MainWindow(QMainWindow):
         file_path = self.encrypted_file
         # Read encrypted file
         fs, encrypted = wavfile.read(file_path) # There is an issue with how this is read I think
-        encrypted = np.expand_dims(encrypted, axis=1)
+        # encrypted = np.expand_dims(encrypted, axis=1)
+
+        print(encrypted.shape)
         # Create the trajectory
         values_dict = {
             "numbers": [],
@@ -140,10 +143,14 @@ class MainWindow(QMainWindow):
         self.thread.rng(
             values_dict, 16 * len(encrypted), self.decryption_x0, self.decryption_r
         )
+
+
         
         # Stack lists from values
         key = np.concatenate(values_dict["numbers"])
         # Decrypt the file
+
+        print(key.shape)
         decrypted = np.bitwise_xor(encrypted, key[:len(encrypted)])
         save_path = self.decrypt_dir + self.decrypt_filename
         write_wav(save_path, fs, decrypted)
@@ -178,11 +185,20 @@ class CompleteThread(QThread):
         self.fs = fs
         self.rec_time = int(duration * fs)
 
+        # Initialize pyaudio object 
+        self.p = pyaudio.PyAudio()
+        self.stream = None
+
+
     def record(self, values_dict=None):
         if values_dict is None:
             values_dict = self.results
-        rec = sd.rec(self.rec_time, samplerate=self.fs, channels=1, blocking=True)
-        values_dict["recordings"].append((32767 * rec).astype(np.int16))
+        # rec = sd.rec(self.rec_time, samplerate=self.fs, channels=1, blocking=True)
+        
+        rec = self.stream.read(self.rec_time)
+        rec = np.frombuffer(rec, dtype=np.int16)
+
+        values_dict["recordings"].append(rec)  # .append((32767 * rec).astype(np.int16))
 
     
     def map_fun(self, x, r): 
@@ -212,9 +228,18 @@ class CompleteThread(QThread):
         self.x0 = trajectory[-1] # So we continue encrypting from here
         bits = self.random_bits(trajectory)
         ints = self.random_bits_to_int(bits)
-        values_dict["numbers"].append(np.expand_dims(np.array(ints, dtype=np.int16).transpose(), 1))
+        # values_dict["numbers"].append(np.expand_dims(np.array(ints, dtype=np.int16).transpose(), 1))
+        values_dict["numbers"].append(np.array(ints, dtype=np.int16))
 
     def run(self):
+        if self.stream is None:
+            self.stream = self.p.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=self.fs,
+                input=True,
+                # frames_per_buffer=self.rec_time,
+            )
         while not self.stop_flag:
             rec_thread = threading.Thread(target=self.record)  # , args=(self.results)) #
             rng_thread = threading.Thread(target=self.rng, args=(self.results, 16 * self.rec_time, self.x0, self.r))
@@ -225,4 +250,10 @@ class CompleteThread(QThread):
             rec_thread.join()
             rng_thread.join()
 
+            print(self.results["numbers"][-1].shape, self.results["recordings"][-1].shape)
+
             self.results["encrypted"].append(np.bitwise_xor(self.results["numbers"][-1], self.results["recordings"][-1]))
+        else:
+            self.stream.stop_stream()
+            self.stream.close()
+            
