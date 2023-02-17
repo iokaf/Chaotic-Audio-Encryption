@@ -1,0 +1,5 @@
+pyaudio
+pyqt6
+numpy
+scipy
+sounddevice

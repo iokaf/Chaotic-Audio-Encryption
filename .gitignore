@@ -134,4 +134,8 @@ paper_figures/
 *.wav
 built_app/
 
+<<<<<<< HEAD
 Dockerfile
+=======
+Dockerfile
+>>>>>>> with_pyaudio
