@@ -133,3 +133,5 @@ dev_files/
 paper_figures/
 *.wav
 built_app/
+
+Dockerfile
