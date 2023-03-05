@@ -102,9 +102,7 @@ SOFTWARE.
 > title={Automata-Derived Chaotic Image Encryption Scheme}, <br>
 > author={Kafetzis, Ioannis and Volos, Christos and 
 > Nistazakis, Hector E. ænd
-> Goudos, Sotirios and
-> Bardis, Nikolaos G.
-> }, <br>
+> Goudos, Sotirios
 > booktitle={2023 12th International Conference on Modern Circuits and    Systems Technologies (MOCAST)}, <br>
 > pages={1--4}, <br>
 > year={2023}, <br>
