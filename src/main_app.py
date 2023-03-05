@@ -41,8 +41,8 @@ class MainWindow(QMainWindow):
         
 
         # Connect buttons to methods
-        self.start_button.clicked.connect(self.start_numbers)
-        self.stop_button.clicked.connect(self.stop_numbers)
+        self.start_button.clicked.connect(self.start_recording)
+        self.stop_button.clicked.connect(self.stop_recording)
         self.select_save_dir.clicked.connect(self.select_save_directory)
         self.get_encrypted_file.clicked.connect(self.select_encrypted_file)
         self.encryption_keys.clicked.connect(self.select_encryption_keys)
@@ -62,21 +62,18 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.select_decryption_save_dir, 2, 1)
         layout.addWidget(self.decrypt, 3, 1)
 
-        # Add a text field where the user gives the filename for the encrypted file
-
-
         # Set layout as central widget
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
         self.stop_flag = False
-        self.stop_button.clicked.connect(self.stop_numbers)
 
         self.thread = CompleteThread(fs=self.freq)
 
         self.recordings = []
 
-    def start_numbers(self):
+    def start_recording(self):
+        """Initiates the recording thread and disables the start button"""
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         # Reset the dictionary
@@ -91,7 +88,8 @@ class MainWindow(QMainWindow):
         self.thread.r = self.encryption_r
         self.thread.start()
 
-    def stop_numbers(self):
+    def stop_recording(self):
+        """Stops the recording thread and enables the start button"""
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         
@@ -102,12 +100,15 @@ class MainWindow(QMainWindow):
         encrypted = np.concatenate(self.thread.results["encrypted"])
 
         decrypted = np.bitwise_xor(encrypted, numbers[:len(encrypted)])
-        # save recording as wav file
-        write_wav(f"{self.save_dir}test.wav", self.freq, recording)
+
+        # For debugging, allows to save the original recording
+        # write_wav(f"{self.save_dir}test.wav", self.freq, recording)
+
+        # Save the encrypted file
         write_wav(f"{self.save_dir}{self.encrypt_filename}", self.freq, encrypted)
-        # write_wav(f"{self.save_dir}decrypted.wav", self.freq, decrypted)
 
     def select_save_directory(self):
+        """Opens a dialog to select the save directory and select filename"""
         self.save_dir = QFileDialog.getExistingDirectory(self, "Select Directory")
         self.encrypt_filename = QInputDialog.getText(self, "Encryption Filename", "Enter filename")[0]
 
@@ -122,20 +123,24 @@ class MainWindow(QMainWindow):
 
 
     def select_encrypted_file(self):
+        """Opens a dialog to select the encrypted file"""
         self.encrypted_file = QFileDialog.getOpenFileName(self, "Select Encrypted File")[0]
         
 
     def select_encryption_keys(self):
+        """Opens a dialog to select the encryption keys"""
         # Create input dialogs
         self.encryption_x0, ok = QInputDialog.getDouble(self, "Encryption x0", "Enter x0", decimals=16)
         self.encryption_r, ok = QInputDialog.getDouble(self, "Encryption r", "Enter r", decimals=16)
 
     def select_decrypt_keys(self):
+        """Opens a dialog to select the decryption keys"""
         # Create input dialogs
         self.decryption_x0, ok = QInputDialog.getDouble(self, "Decryption x0", "Enter x0", decimals=16)
         self.decryption_r, ok = QInputDialog.getDouble(self, "Decryption r", "Enter r", decimals=16)
 
     def decrypt_file(self):
+        """Decrypts the file"""
         file_path = self.encrypted_file
         # Read encrypted file
         fs, encrypted = wavfile.read(file_path) # There is an issue with how this is read I think
@@ -158,6 +163,7 @@ class MainWindow(QMainWindow):
         write_wav(save_path, fs, decrypted)
     
     def select_decryption_save_directory(self):
+        """Opens a dialog to select the save directory and select filename"""
         self.decrypt_dir = QFileDialog.getExistingDirectory(self, "Select Directory")
         self.decrypt_filename = QInputDialog.getText(self, "Decryption Filename", "Enter filename")[0]
 
@@ -193,6 +199,7 @@ class CompleteThread(QThread):
 
 
     def record(self, values_dict=None):
+        """Records a single chunk of audio and appends it to the results dictionary"""
         if values_dict is None:
             values_dict = self.results
         
@@ -203,9 +210,20 @@ class CompleteThread(QThread):
 
     
     def map_fun(self, x, r): 
+        """The chaotic map iteration."""
         return r * np.sin(np.pi * x) + r * np.remainder(10 ** 3 * x, 1)
 
     def trajectory(self, x, r, num_points):
+        """Creates a trajectory of points from the chaotic map.
+        
+        Args:
+            x (float): The initial value.
+            r (float): The parameter of the chaotic map.
+            num_points (int): The number of points to generate.
+        
+        Returns:
+            list: The list of points.
+        """
         points = [x]
         for _ in range(num_points):
             x = self.map_fun(x, r)
@@ -213,18 +231,49 @@ class CompleteThread(QThread):
         return points[1:]
 
     def prbg(self, x):
+        """Generates a pseudo random bit from a float.
+        
+        Args:
+            x (float): The float to generate the bit from.
+
+        Returns:
+            int: The bit.
+        """
         return int(np.mod(10 ** 10 * x, 1) > 0.5)
 
     def random_bits(self, trajectory):
+        """Generates a list of random bits from a trajectory.
+
+        Args:
+            trajectory (list): The trajectory to generate the bits from.
+
+        Returns:
+            list: The list of bits.
+        """
         return list(map(self.prbg, trajectory))
 
     def random_bits_to_int(self, bits):
+        """Converts a list of bits to a list of ints.
+        Args:
+            bits (list): The list of bits.
+
+        Returns:
+            list: The list of ints.
+        """
         bit_pieces = [bits[i:i+16] for i in range(0, len(bits), 16)]
         ints = [int("".join(map(str, bit_piece)), 2) - 2**15 for bit_piece in bit_pieces]
         return ints
 
 
     def rng(self, values_dict, num_points, x0, r):
+        """Generates a list of random numbers from a trajectory.
+
+        Args:
+            values_dict (dict): The dictionary to append the numbers to.
+            num_points (int): The number of points to generate.
+            x0 (float): The initial value.
+            r (float): The parameter of the chaotic map.
+        """
         trajectory = self.trajectory(x0, r, num_points)
         self.x0 = trajectory[-1] # So we continue encrypting from here
         bits = self.random_bits(trajectory)
@@ -232,6 +281,13 @@ class CompleteThread(QThread):
         values_dict["numbers"].append(np.array(ints, dtype=np.int16))
 
     def run(self):
+        """Runs the thread
+        
+        Description:
+            This thread records audio and generates random numbers at the same time.
+            It then encrypts the audio and appends it to the results dictionary.
+        """
+
         if self.stream is None:
             self.stream = self.p.open(
                 format=pyaudio.paInt16,
