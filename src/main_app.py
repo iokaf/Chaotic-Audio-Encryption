@@ -79,6 +79,13 @@ class MainWindow(QMainWindow):
     def start_numbers(self):
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
+        # Reset the dictionary
+        self.thread.results = {
+            "recordings": [],
+            "numbers": [],
+            "encrypted": [],
+        }
+        
         self.stop_flag = False
         self.thread.x0 = self.encryption_x0
         self.thread.r = self.encryption_r
@@ -120,19 +127,18 @@ class MainWindow(QMainWindow):
 
     def select_encryption_keys(self):
         # Create input dialogs
-        self.encryption_x0, ok = QInputDialog.getDouble(self, "Encryption x0", "Enter x0")
-        self.encryption_r, ok = QInputDialog.getDouble(self, "Encryption r", "Enter r")
+        self.encryption_x0, ok = QInputDialog.getDouble(self, "Encryption x0", "Enter x0", decimals=16)
+        self.encryption_r, ok = QInputDialog.getDouble(self, "Encryption r", "Enter r", decimals=16)
 
     def select_decrypt_keys(self):
         # Create input dialogs
-        self.decryption_x0, ok = QInputDialog.getDouble(self, "Decryption x0", "Enter x0")
-        self.decryption_r, ok = QInputDialog.getDouble(self, "Decryption r", "Enter r")
+        self.decryption_x0, ok = QInputDialog.getDouble(self, "Decryption x0", "Enter x0", decimals=16)
+        self.decryption_r, ok = QInputDialog.getDouble(self, "Decryption r", "Enter r", decimals=16)
 
     def decrypt_file(self):
         file_path = self.encrypted_file
         # Read encrypted file
         fs, encrypted = wavfile.read(file_path) # There is an issue with how this is read I think
-        # encrypted = np.expand_dims(encrypted, axis=1)
 
         # Create the trajectory
         values_dict = {
@@ -143,8 +149,6 @@ class MainWindow(QMainWindow):
             values_dict, 16 * len(encrypted), self.decryption_x0, self.decryption_r
         )
 
-
-        
         # Stack lists from values
         key = np.concatenate(values_dict["numbers"])
         # Decrypt the file
@@ -191,12 +195,11 @@ class CompleteThread(QThread):
     def record(self, values_dict=None):
         if values_dict is None:
             values_dict = self.results
-        # rec = sd.rec(self.rec_time, samplerate=self.fs, channels=1, blocking=True)
         
         rec = self.stream.read(self.rec_time)
         rec = np.frombuffer(rec, dtype=np.int16)
 
-        values_dict["recordings"].append(rec)  # .append((32767 * rec).astype(np.int16))
+        values_dict["recordings"].append(rec) 
 
     
     def map_fun(self, x, r): 
@@ -226,7 +229,6 @@ class CompleteThread(QThread):
         self.x0 = trajectory[-1] # So we continue encrypting from here
         bits = self.random_bits(trajectory)
         ints = self.random_bits_to_int(bits)
-        # values_dict["numbers"].append(np.expand_dims(np.array(ints, dtype=np.int16).transpose(), 1))
         values_dict["numbers"].append(np.array(ints, dtype=np.int16))
 
     def run(self):
@@ -236,10 +238,9 @@ class CompleteThread(QThread):
                 channels=1,
                 rate=self.fs,
                 input=True,
-                # frames_per_buffer=self.rec_time,
             )
         while not self.stop_flag:
-            rec_thread = threading.Thread(target=self.record)  # , args=(self.results)) #
+            rec_thread = threading.Thread(target=self.record) 
             rng_thread = threading.Thread(target=self.rng, args=(self.results, 16 * self.rec_time, self.x0, self.r))
 
             rec_thread.start()
