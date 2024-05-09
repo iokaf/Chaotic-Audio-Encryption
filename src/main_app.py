@@ -9,8 +9,101 @@ from scipy.io import wavfile
 
 import sys
 from PyQt6.QtCore import QThread, pyqtSignal
-from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QPushButton, QWidget, QFileDialog, QInputDialog, QGridLayout
+from PyQt6.QtWidgets import (
+    QMainWindow, QVBoxLayout, QPushButton, QWidget, QFileDialog, QInputDialog, 
+    QGridLayout, QLabel, QDialog
+)
 
+class HelpDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Help")
+        
+        layout = QVBoxLayout()
+
+        encrypt_instructions = QLabel("Encryption")
+        font = encrypt_instructions.font()
+        font.setPointSize(20)
+        font.setBold(True)
+        encrypt_instructions.setFont(font)
+        layout.addWidget(encrypt_instructions)
+
+        encrypt_step_1 = QLabel("1. Select the directory and filename for the encrypted file.")
+        layout.addWidget(encrypt_step_1)
+
+        encrypt_step_2 = QLabel("2. Select encryption keys and add the keys.")
+        layout.addWidget(encrypt_step_2)
+
+        encrypt_step_3 = QLabel("3. Click the start button to start recording.")
+        layout.addWidget(encrypt_step_3)
+
+        encrypt_step_4 = QLabel("4. Click the stop button to stop recording.")
+        layout.addWidget(encrypt_step_4)
+
+        encrypt_step_5 = QLabel("5. The encrypted file will be saved in the selected directory. \n \n ")
+        layout.addWidget(encrypt_step_5)
+
+
+        decrypt_instructions = QLabel("Decryption")
+        font = decrypt_instructions.font()
+        font.setPointSize(20)
+        font.setBold(True)
+        encrypt_instructions.setFont(font)
+        layout.addWidget(decrypt_instructions)
+
+        decrypt_step_1 = QLabel("1. Select the encrypted file.")
+        layout.addWidget(decrypt_step_1)
+
+        decrypt_step_2 = QLabel("2. Select the decryption keys. They should be the same as the ones used for encryption.")
+        layout.addWidget(decrypt_step_2)
+
+        decrypt_step_3 = QLabel("3. Select the directory and filename to save  the decrypted file.")
+        layout.addWidget(decrypt_step_3)
+
+        decrypt_step_4 = QLabel("4. Click the decrypt button to decrypt the file.\n \n")
+        layout.addWidget(decrypt_step_4)
+        
+        # Add a title label with information about hte software
+        # Make the title bold and bigger
+
+        title = QLabel("Chaotic Audio Encryptor")
+        font = title.font()
+        font.setPointSize(20)
+        font.setBold(True)
+        title.setFont(font)
+
+        layout.addWidget(title)
+
+        map_used = QLabel("This application uses the chaotic map: x_n+1 = r * sin(pi * x_n) + r * (10^3 * x_n) % 1")
+        layout.addWidget(map_used)
+
+        prbg_used = QLabel("The pseudo random bit generator is: bit_n = 10^10 * x_n % 1 > 0.5 \n \n")
+        layout.addWidget(prbg_used)
+
+        title = QLabel("Citation")
+        font = title.font()
+        font.setPointSize(20)
+        font.setBold(True)
+        title.setFont(font)
+        layout.addWidget(title)
+
+        authors = QLabel("Kafetzis, I., Volos, C., Nistazakis, H. E., Goudos, S., & Bardis, N. G. (2023, June)")
+        citation = QLabel("A Real-time Chaos-based Audio Encryption Scheme.")
+        journal = QLabel("In 2023 7th International Conference on Advanced Information Systems and Engineering (ICAISE) (pp. 1-5). IEEE.")
+        doi = QLabel("DOI: 10.1109/MOCAST57943.2023.10176599")
+
+        layout.addWidget(authors)
+        layout.addWidget(citation)
+        layout.addWidget(journal)
+        layout.addWidget(doi)
+
+
+
+
+        
+
+
+        self.setLayout(layout)
 
 class MainWindow(QMainWindow):
     def __init__(self, freq=4_000):
@@ -38,6 +131,7 @@ class MainWindow(QMainWindow):
         self.encryption_keys = QPushButton("Select Encryption Keys")
         self.decrypt_keys = QPushButton("Select Decryption Keys")
         self.decrypt = QPushButton("Decrypt")
+        self.help = QPushButton("Help")
         
 
         # Connect buttons to methods
@@ -49,6 +143,7 @@ class MainWindow(QMainWindow):
         self.decrypt_keys.clicked.connect(self.select_decrypt_keys)
         self.select_decryption_save_dir.clicked.connect(self.select_decryption_save_directory)
         self.decrypt.clicked.connect(self.decrypt_file)
+        self.help.clicked.connect(self.show_help)
 
         self.stop_button.setEnabled(False)
         # Create layout and add buttons
@@ -67,10 +162,20 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         self.setCentralWidget(widget)
         self.stop_flag = False
+        # Add the help button
+        layout.addWidget(self.help, 4, 0, 1, 2)
 
         self.thread = CompleteThread(fs=self.freq)
 
         self.recordings = []
+
+    def show_help(self):
+        """Shows a help dialog"""
+        help_dialog = HelpDialog(self)
+        help_dialog.exec()
+
+
+
 
     def start_recording(self):
         """Initiates the recording thread and disables the start button"""
