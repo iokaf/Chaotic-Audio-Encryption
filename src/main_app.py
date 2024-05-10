@@ -21,12 +21,39 @@ class HelpDialog(QDialog):
         
         layout = QVBoxLayout()
 
-        encrypt_instructions = QLabel("Encryption")
+        title = QLabel("Chaotic Audio Encryptor")
+        font = title.font()
+        font.setPointSize(20)
+        font.setBold(True)
+        title.setFont(font)
+        layout.addWidget(title)
+
+        developers = QLabel("Developer: Dr. Ioannis Kafetzis")
+        layout.addWidget(developers)
+        contact = QLabel("Contact: ioanniskaf@gmail.com")
+        layout.addWidget(contact)
+        
+
+
+        encrypt_instructions = QLabel("Instructions")
         font = encrypt_instructions.font()
         font.setPointSize(20)
         font.setBold(True)
         encrypt_instructions.setFont(font)
         layout.addWidget(encrypt_instructions)
+
+        
+
+        general = QLabel("Please turn your keyboard in English. \n \n")
+        layout.addWidget(general)
+
+        encrypt_instructions = QLabel("Encryption")
+        font = encrypt_instructions.font()
+        font.setPointSize(15)
+        font.setBold(True)
+        encrypt_instructions.setFont(font)
+        layout.addWidget(encrypt_instructions)
+
 
         encrypt_step_1 = QLabel("1. Select the directory and filename for the encrypted file.")
         layout.addWidget(encrypt_step_1)
@@ -46,9 +73,9 @@ class HelpDialog(QDialog):
 
         decrypt_instructions = QLabel("Decryption")
         font = decrypt_instructions.font()
-        font.setPointSize(20)
+        font.setPointSize(15)
         font.setBold(True)
-        encrypt_instructions.setFont(font)
+        decrypt_instructions.setFont(font)
         layout.addWidget(decrypt_instructions)
 
         decrypt_step_1 = QLabel("1. Select the encrypted file.")
@@ -66,7 +93,7 @@ class HelpDialog(QDialog):
         # Add a title label with information about hte software
         # Make the title bold and bigger
 
-        title = QLabel("Chaotic Audio Encryptor")
+        title = QLabel("Chaotic Map and PRBG")
         font = title.font()
         font.setPointSize(20)
         font.setBold(True)
@@ -148,14 +175,14 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(False)
         # Create layout and add buttons
         layout = QGridLayout()
-        layout.addWidget(self.select_save_dir, 0,0)
-        layout.addWidget(self.encryption_keys, 1,0)
-        layout.addWidget(self.start_button, 2,0)
-        layout.addWidget(self.stop_button, 3,0)
-        layout.addWidget(self.get_encrypted_file, 0, 1)
-        layout.addWidget(self.decrypt_keys, 1, 1)
-        layout.addWidget(self.select_decryption_save_dir, 2, 1)
-        layout.addWidget(self.decrypt, 3, 1)
+        layout.addWidget(self.select_save_dir, 1,0)
+        layout.addWidget(self.encryption_keys, 2,0)
+        layout.addWidget(self.start_button, 3,0)
+        layout.addWidget(self.stop_button, 4,0)
+        layout.addWidget(self.get_encrypted_file, 1, 1)
+        layout.addWidget(self.decrypt_keys, 2, 1)
+        layout.addWidget(self.select_decryption_save_dir, 3, 1)
+        layout.addWidget(self.decrypt, 4, 1)
 
         # Set layout as central widget
         widget = QWidget()
@@ -163,7 +190,19 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
         self.stop_flag = False
         # Add the help button
-        layout.addWidget(self.help, 4, 0, 1, 2)
+        layout.addWidget(self.help, 5, 0, 1, 2)
+
+        # On the top add a title widget with the name "Chaotic Audio Encryptor"
+        # Make the font size bigger and bold
+        title = QLabel("Chaotic Audio Encryptor")
+        font = title.font()
+        font.setPointSize(20)
+
+        font.setBold(True)
+        title.setFont(font)
+        layout.addWidget(title, 0, 0, 1, 2)
+
+
 
         self.thread = CompleteThread(fs=self.freq)
 
